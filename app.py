@@ -7,6 +7,10 @@ CONNECTION_POOL_SIZE = int(os.getenv("CONNECTION_POOL_SIZE", "10"))
 
 
 def connect(host: str, port: int = 5432):
+    # Validate port
+    if port < 1 or port > 65535:
+        raise ValueError(f"Port must be between 1 and 65535 (inclusive). Received: {port}")
+
     retries = 0
     while retries < MAX_RETRIES:
         try:
