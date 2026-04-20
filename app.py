@@ -7,6 +7,8 @@ CONNECTION_POOL_SIZE = int(os.getenv("CONNECTION_POOL_SIZE", "10"))
 
 
 def connect(host: str, port: int = 5432):
+    if not host or not host.strip():
+        raise ValueError(f"DB host must not be empty (got {host!r})")
     retries = 0
     while retries < MAX_RETRIES:
         try:
