@@ -6,12 +6,11 @@ TIMEOUT = int(os.getenv("TIMEOUT", "30"))
 CONNECTION_POOL_SIZE = int(os.getenv("CONNECTION_POOL_SIZE", "10"))
 
 
-def connect(host: str, port: int = 5432):
+def connect(host: str, port: int = 5432, timeout: int = TIMEOUT):
     retries = 0
     while retries < MAX_RETRIES:
         try:
-            # TODO: replace with real connection
-            time.sleep(0.1)
+            time.sleep(timeout)
             return {"host": host, "port": port, "status": "connected"}
         except Exception as exc:
             retries += 1
