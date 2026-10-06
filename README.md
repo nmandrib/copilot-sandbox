@@ -14,3 +14,23 @@ python dwb.py "https://youtu.be/ID" --cookies-navegador chrome  # si YouTube pid
 ```
 
 Los archivos se guardan en `descargas/`. Para unir video y audio en alta calidad hace falta `ffmpeg`.
+
+### Versión web
+
+`web.py` es una página donde pegas el enlace y el navegador descarga el archivo.
+
+```bash
+flask --app web run          # en tu ordenador: http://127.0.0.1:5000
+docker build -t dwb-web . && docker run -p 8000:8000 dwb-web   # para publicarla
+```
+
+Para usarlo desde otra web basta con enlazar o enviar un formulario a
+`https://TU-SERVIDOR/descargar?url=ENLACE&tipo=video|audio&calidad=720`.
+
+Variables de entorno opcionales:
+
+- `DWB_CLAVE`: si se define, la página pide una clave antes de descargar.
+- `DWB_COOKIES`: ruta a un `cookies.txt` de YouTube. Los servidores en la nube casi
+  siempre lo necesitan, porque YouTube les responde "Sign in to confirm you're not a bot".
+
+Solo acepta enlaces de YouTube, para que nadie pueda usar el servidor para pedir otras direcciones.

@@ -57,13 +57,15 @@ def _progress(d: dict) -> None:
 
 def download(url: str, output_dir: str = "descargas", audio_only: bool = False,
              max_height: int | None = None, cookies: str | None = None,
-             cookies_browser: str | None = None) -> str:
+             cookies_browser: str | None = None, extra_opts: dict | None = None) -> str:
     opts = build_options(output_dir, audio_only, max_height, cookies, cookies_browser)
+    opts.update(extra_opts or {})
     with YoutubeDL(opts) as ydl:
         info = ydl.extract_info(url, download=True)
         print(f"Título: {info.get('title')}")
         print(f"Duración: {info.get('duration_string') or '?'}")
-        return ydl.prepare_filename(info)
+        # Ruta final, ya unida en mp4 o convertida a mp3.
+        return info["requested_downloads"][-1]["filepath"]
 
 
 def main() -> None:
