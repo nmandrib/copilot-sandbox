@@ -1,0 +1,19 @@
+# Descargador en tu ordenador, publicado en tu dominio con Cloudflare Tunnel.
+# Pon TUNNEL_TOKEN (y si quieres DWB_CLAVE) en un archivo .env y ejecuta: docker compose up -d
+services:
+  web:
+    build: .
+    restart: unless-stopped
+    environment:
+      DWB_CLAVE: ${DWB_CLAVE:-}
+    ports:
+      - "127.0.0.1:8000:8000"   # también disponible en http://localhost:8000
+
+  tunnel:
+    image: cloudflare/cloudflared:latest
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run
+    environment:
+      TUNNEL_TOKEN: ${TUNNEL_TOKEN:?Falta TUNNEL_TOKEN en el archivo .env}
+    depends_on:
+      - web
