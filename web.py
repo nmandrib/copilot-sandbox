@@ -180,19 +180,41 @@ def archivo(trabajo_id):
 
 
 def _descargar(trabajo: dict, url: str, audio_only: bool, max_height: int | None) -> None:
+    # En calidad alta YouTube da el video y el audio por separado y yt-dlp los baja uno
+    # detrás de otro; se suman las partes para mostrar un único porcentaje.
+    partes: dict[str, float] = {}  # format_id -> tamaño (estimado hasta que termina de bajar)
+    terminadas: set[str] = set()
+    porcentaje = 0
+
+    def ver_partes(info: dict, *, incomplete: bool) -> None:
+        # yt-dlp lo llama justo antes de descargar, cuando aún se ve la lista de partes
+        # (a progreso solo le llega la parte que se está bajando).
+        for parte in info.get("requested_formats") or []:
+            partes[parte["format_id"]] = parte.get("filesize") or parte.get("filesize_approx") or 0
+
     def progreso(d: dict) -> None:
-        total = d.get("total_bytes") or d.get("total_bytes_estimate")
-        if d["status"] == "downloading" and total:
-            trabajo["mensaje"] = f"Descargando… {d.get('downloaded_bytes', 0) * 100 // total}%"
+        nonlocal porcentaje
+        actual = d["info_dict"].get("format_id")
+        if d["status"] == "downloading":
+            partes[actual] = d.get("total_bytes") or d.get("total_bytes_estimate") or partes.get(actual, 0)
+            hecho = d.get("downloaded_bytes", 0) + sum(partes[p] for p in terminadas)
+            total = sum(partes.values())
+            if total:
+                porcentaje = max(porcentaje, min(int(hecho * 100 / total), 99))
+                trabajo["mensaje"] = f"Descargando… {porcentaje}%"
         elif d["status"] == "finished":
-            trabajo["mensaje"] = "Procesando…"
+            partes[actual] = d.get("total_bytes") or d.get("downloaded_bytes") or partes.get(actual, 0)
+            terminadas.add(actual)
+            if set(partes) <= terminadas:
+                trabajo["mensaje"] = "Uniendo video y audio…" if len(partes) > 1 else "Procesando…"
 
     try:
         trabajo["ruta"] = dwb.download(
             url, trabajo["carpeta"], audio_only=audio_only, max_height=max_height,
             cookies=os.getenv("DWB_COOKIES"),
             # Solo el extractor de YouTube: así nadie puede usar el servidor para pedir otras URLs.
-            extra_opts={"allowed_extractors": ["youtube"], "progress_hooks": [progreso]},
+            extra_opts={"allowed_extractors": ["youtube"], "progress_hooks": [progreso],
+                        "match_filter": ver_partes},
         )
     except Exception as exc:
         shutil.rmtree(trabajo["carpeta"], ignore_errors=True)
