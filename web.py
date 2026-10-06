@@ -3,7 +3,7 @@
 La descarga se hace en segundo plano y la página va preguntando cómo va, así ninguna
 petición tarda mucho (Cloudflare corta las que no responden en 100 segundos).
 
-Local:      flask --app web run
+Local:      python web.py   (abre la página en el navegador)
 Producción: gunicorn -b 0.0.0.0:8000 --threads 4 web:app
             (un solo proceso: las descargas en curso se guardan en memoria)
 
@@ -15,9 +15,11 @@ import hmac
 import os
 import secrets
 import shutil
+import sys
 import tempfile
 import threading
 import time
+import webbrowser
 from urllib.parse import urlparse
 
 from flask import Flask, abort, jsonify, redirect, render_template_string, request, send_file, url_for
@@ -208,3 +210,13 @@ def _borrar_caducados() -> None:
         viejos = [i for i, t in trabajos.items() if t["creado"] < limite and t["estado"] != "descargando"]
         for trabajo_id in viejos:
             shutil.rmtree(trabajos.pop(trabajo_id)["carpeta"], ignore_errors=True)
+
+
+if __name__ == "__main__":
+    # En el ejecutable de PyInstaller, ffmpeg y deno van dentro del paquete.
+    if getattr(sys, "frozen", False):
+        os.environ["PATH"] = sys._MEIPASS + os.pathsep + os.environ.get("PATH", "")
+    direccion = "http://127.0.0.1:8765"
+    print(f"Descargador abierto en {direccion}. Cierra esta ventana para salir.")
+    threading.Timer(1, webbrowser.open, [direccion]).start()
+    app.run(port=8765, threaded=True)

@@ -1,0 +1,60 @@
+# Genera el ejecutable para Windows, Mac y Linux y lo publica en la release "ultima":
+# https://github.com/<usuario>/<repo>/releases/tag/ultima
+name: Ejecutables
+
+on:
+  push:
+    branches: [main]
+    paths: [dwb.py, web.py, requirements.txt, empaquetar.py, .github/workflows/ejecutables.yml]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ejecutables
+  cancel-in-progress: true
+
+jobs:
+  preparar:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Rehacer la release "ultima" en este commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          gh release delete ultima --yes --cleanup-tag || true
+          gh release create ultima --target "$GITHUB_SHA" --title "Descargador de YouTube" \
+            --notes "Descarga el archivo de tu sistema, ábrelo y se abrirá la página en el navegador."
+
+  construir:
+    needs: preparar
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            archivo: DescargadorYouTube-windows.exe
+          - os: macos-latest
+            archivo: DescargadorYouTube-mac
+          - os: ubuntu-latest
+            archivo: DescargadorYouTube-linux
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+      - run: pip install -r requirements.txt pyinstaller imageio-ffmpeg
+      - run: python empaquetar.py
+      - name: Subir a la release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          mv dist/DescargadorYouTube* "dist/${{ matrix.archivo }}"
+          gh release upload ultima "dist/${{ matrix.archivo }}" --clobber

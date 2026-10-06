@@ -1,3 +1,6 @@
 descargas/
 __pycache__/
 .env
+build/
+dist/
+*.spec
